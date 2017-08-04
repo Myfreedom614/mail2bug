@@ -20,7 +20,9 @@ namespace Mail2Bug.Email.EWS
             var folderFilter = new SearchFilter.IsEqualTo(FolderSchema.DisplayName, folderName);
 
             // No need to look for more than one folder (can't have more than one folder with the exact same name)
-            var findFoldersResults = rootFolder.FindFolders(folderFilter, new FolderView(1));
+            var view = new FolderView(1);
+            view.Traversal = FolderTraversal.Deep;
+            var findFoldersResults = rootFolder.FindFolders(folderFilter, view);
 
             if (!findFoldersResults.Any())
             {
