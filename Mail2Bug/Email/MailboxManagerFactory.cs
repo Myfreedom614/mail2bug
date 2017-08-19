@@ -34,7 +34,15 @@ namespace Mail2Bug.Email
             switch (emailSettings.ServiceType)
             {
                 case Config.EmailSettings.MailboxServiceType.EWSByFolder:
-                    return new FolderMailboxManager(
+                    if(emailSettings.Recipients != null)
+                        return new FolderMailboxManager(
+                       exchangeService.Service,
+                       emailSettings.IncomingFolder,
+                       postProcessor,
+                       emailSettings.UseConversationGuidOnly,
+                       ParseDelimitedList(emailSettings.Recipients, ';'));
+                    else
+                        return new FolderMailboxManager(
                         exchangeService.Service, 
                         emailSettings.IncomingFolder,
                         postProcessor,
@@ -56,6 +64,11 @@ namespace Mail2Bug.Email
 
         private static IMessagePostProcessor GetPostProcesor(Config.EmailSettings emailSettings, ExchangeService service)
         {
+            if (emailSettings.NeedAction == false)
+            {
+                return new NoActionMessagePostProcessor();
+            }
+
             if (string.IsNullOrEmpty(emailSettings.CompletedFolder) || string.IsNullOrEmpty(emailSettings.ErrorFolder))
             {
                 return new DeleterMessagePostProcessor();

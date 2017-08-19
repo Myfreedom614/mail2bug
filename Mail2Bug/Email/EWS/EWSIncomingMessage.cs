@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using log4net;
 using Microsoft.Exchange.WebServices.Data;
+using System.Text.RegularExpressions;
 
 namespace Mail2Bug.Email.EWS
 {
@@ -40,7 +41,7 @@ namespace Mail2Bug.Email.EWS
                     MeetingRequestSchema.Start,
                     MeetingRequestSchema.End
                 ) { RequestedBodyType = BodyType.HTML }); // Specify Exchange should convert native body format to HTML before returning
-
+            
             message.TryGetProperty(EWSExtendedProperty.PidTagConversationId, out _conversationId);
 
             Attachments = BuildAttachmentList(message);
@@ -52,6 +53,8 @@ namespace Mail2Bug.Email.EWS
         public string RawBody { get { return _message.Body.Text; } }
         
         public string PlainTextBody { get { return GetPlainTextBody(_message); } }
+
+        public string Id { get { return _message.Id.ToString(); } }
 
         public string ConversationId
         {
@@ -127,7 +130,7 @@ namespace Mail2Bug.Email.EWS
         }
 
         public IEnumerable<IIncomingEmailAttachment> Attachments { get; private set; }
-
+        
         /// <summary>
         /// If the extended property for the conversation index is null, fall back to taking
         /// the ConversationID from the ConversationIndex directly, which is 16 bytes, starting at byte 6.
@@ -188,8 +191,9 @@ namespace Mail2Bug.Email.EWS
         {
             if (attachment is FileAttachment)
             {
+                string fixedName = AttachmentNameWrapper(attachment);
                 Logger.DebugFormat("Loading file attachment");
-                attachmentList.Add(new EWSIncomingFileAttachment(attachment as FileAttachment));
+                attachmentList.Add(new EWSIncomingFileAttachment(attachment as FileAttachment, String.IsNullOrEmpty(fixedName) ? null : fixedName));
                 return;
             }
             if (attachment is ItemAttachment)
@@ -200,6 +204,22 @@ namespace Mail2Bug.Email.EWS
             }
 
             Logger.ErrorFormat("Skipping attachment because it's not a file attachment ({0})", attachment.Name);
+        }
+
+        private static string AttachmentNameWrapper(Attachment attachment)
+        {
+            string extName = Path.GetExtension(attachment.Name);
+            string fileName = Path.GetFileNameWithoutExtension(attachment.Name);
+            if(attachment.ContentId == null) {
+                return $"{fileName}@{Path.GetFileNameWithoutExtension(attachment.Id)}{extName}";
+            }
+            Regex regex = new Regex(@"\@.*$");
+            Match match = regex.Match(attachment.ContentId);
+            if (match.Success)
+            {
+                return $"{fileName}{match.Value}{extName}";
+            }
+            return string.Empty;
         }
 
         private static string GetAliasFromEmailAddress(string address)

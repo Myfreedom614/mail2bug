@@ -100,11 +100,29 @@ namespace Mail2Bug.MessageProcessingStrategies
             workItemUpdates[_config.WorkItemSettings.ConversationIndexFieldName] = 
                 rawConversationIndex.Substring(0, Math.Min(rawConversationIndex.Length, TfsTextFieldMaxLength));
 
-    		foreach (var defaultFieldValue in _config.WorkItemSettings.DefaultFieldValues)
+            workItemUpdates[_config.WorkItemSettings.ReceivedOnFieldName] = CalcDateTimeForTFS(message.ReceivedOn).ToString();
+            workItemUpdates[_config.WorkItemSettings.SentOnFieldName] = CalcDateTimeForTFS(message.SentOn).ToString();
+
+            foreach (var defaultFieldValue in _config.WorkItemSettings.DefaultFieldValues)
     		{
     		    workItemUpdates[defaultFieldValue.Field] = resolver.Resolve(defaultFieldValue.Value);
     		}
-    	}
+
+            if (workItemUpdates.ContainsKey("Description"))
+                workItemUpdates["Description"] = AddInfoBeforeDescription(message, workItemUpdates["Description"]);
+        }
+
+        private string AddInfoBeforeDescription(IIncomingEmailMessage message, string description)
+        {
+            return $"ID: {message.Id}, Sender: {message.SenderName}({message.SenderAddress}), ReceivedOn: {message.ReceivedOn.ToString("yyyy-MM-dd HH:mm:ss \"GMT\"zzz")}, SentOn: {message.SentOn.ToString("yyyy-MM-dd HH:mm:ss \"GMT\"zzz")} \n----\n" + description;
+        }
+
+        private DateTime CalcDateTimeForTFS(DateTime dt)
+        {
+            TimeZone curTimeZone = TimeZone.CurrentTimeZone;
+            TimeSpan currentOffset = curTimeZone.GetUtcOffset(DateTime.Now);
+            return dt.AddTicks(currentOffset.Ticks);
+        }
 
         private void TryApplyFieldOverrides(Dictionary<string, string> overrides, int workItemId)
         {
@@ -149,7 +167,7 @@ namespace Mail2Bug.MessageProcessingStrategies
             }
 
             // Construct the text to be appended
-            _workItemManager.ModifyWorkItem(workItemId, message.GetLastMessageText(), workItemUpdates);
+            _workItemManager.ModifyWorkItem(workItemId, AddInfoBeforeDescription(message, message.GetLastMessageText()), workItemUpdates);
 
             ProcessAttachments(message, workItemId);
 
@@ -161,7 +179,7 @@ namespace Mail2Bug.MessageProcessingStrategies
 
         private void ProcessAttachments(IIncomingEmailMessage message, int workItemId)
         {
-            var attachmentFiles = SaveAttachments(message);
+            var attachmentFiles = SaveAttachments(message, _workItemManager.GetAttachmentFileNameList(workItemId));
             _workItemManager.AttachFiles(workItemId, (from object file in attachmentFiles select file.ToString()).ToList());
             attachmentFiles.Delete();
         }
@@ -170,13 +188,13 @@ namespace Mail2Bug.MessageProcessingStrategies
         /// Take attachments from the current mail message and put them in a work item
         /// </summary>
         /// <param name="message"></param>
-        private static TempFileCollection SaveAttachments(IIncomingEmailMessage message)
+        private static TempFileCollection SaveAttachments(IIncomingEmailMessage message, List<string> attNameList = null)
         {
             var attachmentFiles = new TempFileCollection();
 
             foreach (var attachment in message.Attachments)
             {
-                var filename = attachment.SaveAttachmentToFile();
+                var filename = attachment.SaveAttachmentToFile(attNameList);
                 if (filename != null)
                 {
                     attachmentFiles.AddFile(filename, false);

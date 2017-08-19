@@ -242,6 +242,34 @@ namespace Mail2Bug.WorkItemManagement
                 _config.TfsServerConfig.ServiceIdentityPatKeyVaultSecret);
         }
 
+        public List<string> GetAttachmentFileNameList(int workItemId)
+        {
+            if (workItemId <= 0) return null;
+
+            List<string> attNameList;
+
+            try
+            {
+                attNameList = new List<string>();
+                WorkItem workItem = _tfsStore.GetWorkItem(workItemId);
+                workItem.Open();
+
+                foreach (Attachment item in workItem.Attachments)
+                {
+                    attNameList.Add(FileUtils.RemoveLastChar(Path.GetFileNameWithoutExtension(item.Name), '_'));
+                }
+
+                workItem.Close();
+
+                return attNameList;
+            }
+            catch (Exception exception)
+            {
+                Logger.Error(exception.ToString());
+                return null;
+            }
+        }
+
         public void AttachFiles(int workItemId, List<string> fileList)
         {
             if (workItemId <= 0) return;
@@ -250,14 +278,33 @@ namespace Mail2Bug.WorkItemManagement
             {
                 WorkItem workItem = _tfsStore.GetWorkItem(workItemId);
                 workItem.Open();
-
-                fileList.ForEach(file => workItem.Attachments.Add(new Attachment(file)));
+                
+                foreach(var file in fileList)
+                {
+                    if (CheckIfExists(workItem, file) == false)
+                        workItem.Attachments.Add(new Attachment(file));
+                    else
+                        Logger.InfoFormat("{0} is already existed, skip to next one", Path.GetFileName(file));
+                }
+                
                 ValidateAndSaveWorkItem(workItem);
             }
             catch (Exception exception)
             {
                 Logger.Error(exception.ToString());
             }
+        }
+
+        private bool CheckIfExists(WorkItem workItem, string filePath)
+        {
+            foreach (Attachment item in workItem.Attachments)
+            {
+                if (FileUtils.RemoveLastChar(Path.GetFileNameWithoutExtension(item.Name), '_') == FileUtils.RemoveLastChar(Path.GetFileNameWithoutExtension(filePath), '_'))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <param name="values">The list of fields and their desired values to apply to the work item</param>

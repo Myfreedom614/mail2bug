@@ -131,6 +131,11 @@ namespace Mail2Bug.WorkItemManagement
             }
         }
 
+        public List<string> GetAttachmentFileNameList(int workItemId)
+        {
+            throw new NotImplementedException();
+        }
+
         public SortedList<string, int> WorkItemsCache { get; set; }
 
         public Dictionary<int, Dictionary<string, string>> Bugs = new Dictionary<int, Dictionary<string, string>>(); 

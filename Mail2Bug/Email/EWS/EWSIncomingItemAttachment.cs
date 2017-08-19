@@ -2,6 +2,7 @@
 using log4net;
 using Mail2Bug.Helpers;
 using Microsoft.Exchange.WebServices.Data;
+using System.Collections.Generic;
 
 namespace Mail2Bug.Email.EWS
 {
@@ -19,7 +20,7 @@ namespace Mail2Bug.Email.EWS
             Logger.DebugFormat("Attachment name is {0}", _attachment.Name);
         }
 
-        public string SaveAttachmentToFile()
+        public string SaveAttachmentToFile(List<string> attNameList = null)
         {
             return SaveAttachmentToFile(FileUtils.GetValidFileName(_attachment.Name, "eml", Path.GetTempPath()));
         }

@@ -120,6 +120,8 @@ namespace Mail2Bug
             }
 
             public string ConversationIndexFieldName { get; set; }
+            public string ReceivedOnFieldName { get; set; }
+            public string SentOnFieldName { get; set; }
 
             public List<DefaultValueDefinition> DefaultFieldValues { get; set; }
             public List<MnemonicDefinition> Mnemonics { get; set; }
@@ -215,6 +217,13 @@ namespace Mail2Bug
             /// Incoming Folder is used for EWSByFolder MailboxServiceType
             /// </summary>
             public string IncomingFolder { get; set; }
+
+            /// <summary>
+            /// If need action after processing a message
+            /// By default, the value is true, CompletedFolder and ErrorFloder should be set
+            /// Otherwise, the message will be deleted
+            /// </summary>
+            public bool NeedAction { get; set; } = true;
 
             public string CompletedFolder { get; set; }
             public string ErrorFolder { get; set; }

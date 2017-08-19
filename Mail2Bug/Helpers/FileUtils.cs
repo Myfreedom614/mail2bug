@@ -53,6 +53,22 @@ namespace Mail2Bug.Helpers
             return filename;
         }
 
+        public static bool CheckIfExistLastChar(string originalStr, char subStr)
+        {
+            if (originalStr[originalStr.Length - 1] == subStr)
+                return true;
+            return false;
+        }
+
+        public static string RemoveLastChar(string originalStr, char subStr)
+        {
+            if(CheckIfExistLastChar(originalStr, subStr))
+            {
+                return RemoveLastChar(originalStr.Remove(originalStr.Length - 1), subStr);
+            }
+            return originalStr;
+        }
+
         private static readonly Random Rand = new Random();
     }
 }
